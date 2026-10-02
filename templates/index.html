@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CobraFácil - Panel Principal</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .qr-preview-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
+        }
+        .qr-preview-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1) !important;
+        }
+        .extra-small {
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow-sm">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
+            <img src="/static/logo.png" alt="Logo" class="me-2" style="max-height: 35px;" onerror="this.style.display='none'">
+            Cobra Fácil
+        </a>
+        <div class="d-flex align-items-center text-white">
+            <span class="me-3 small">Empresa: <strong>{{ empresa }}</strong> | Usuario: <strong>{{ usuario }}</strong></span>
+            <a href="/logout" class="btn btn-outline-light btn-sm">Cerrar Sesión</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container mb-5">
+
+    {% if mensaje_alerta %}
+    <div class="alert alert-info alert-dismissible fade show mb-4" role="alert">
+        {{ mensaje_alerta }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <!-- Tarjetas de Resumen y Suscripción -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card bg-white border-0 shadow-sm p-3">
+                <span class="text-muted small fw-bold">ESTADO DE SUSCRIPCIÓN</span>
+                <h5 class="mt-1 mb-0 {% if suscripcion_activa %}text-success{% else %}text-danger{% endif %}">
+                    {{ suscripcion_estado }}
+                </h5>
+                <small class="text-muted">Vence: {{ suscripcion_vence }}</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-white border-0 shadow-sm p-3">
+                <span class="text-muted small fw-bold">TOTAL COBRADO</span>
+                <h4 class="text-success mt-1 mb-0">S/ {{ "%.2f"|format(total_cobrado) }}</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-white border-0 shadow-sm p-3">
+                <span class="text-muted small fw-bold">TOTAL PENDIENTE</span>
+                <h4 class="text-warning mt-1 mb-0">S/ {{ "%.2f"|format(total_pendiente) }}</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-white border-0 shadow-sm p-3 d-flex justify-content-center">
+                <a href="/probar" class="btn btn-outline-primary btn-sm w-100 mb-1">
+                    <i class="bi bi-send"></i> Probar Envío Manual
+                </a>
+                <a href="/exportar_excel" class="btn btn-outline-success btn-sm w-100">
+                    <i class="bi bi-file-earmark-excel"></i> Exportar a Excel
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Clientes, QR Yape y Formularios -->
+    <div class="row g-4">
+        <!-- Columna Izquierda: Registrar Cliente, QR Yape y Plantilla -->
+        <div class="col-md-4">
+            <!-- Formulario Registrar Cliente -->
+            <div class="card border-0 shadow-sm p-4 bg-white mb-4">
+                <h5 class="fw-bold mb-3 text-primary"><i class="bi bi-person-plus"></i> Registrar Cliente</h5>
+                <form action="/agregar" method="POST">
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Nombre del Cliente</label>
+                        <input type="text" class="form-control form-control-sm" name="nombre" placeholder="Ej. Juan Pérez" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Teléfono (WhatsApp)</label>
+                        <input type="text" class="form-control form-control-sm" name="telefono" placeholder="Ej. 987654321" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Monto (S/)</label>
+                        <input type="number" step="0.01" class="form-control form-control-sm" name="monto" placeholder="Ej. 150.00" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Forma de Pago</label>
+                        <input type="text" class="form-control form-control-sm" name="forma_pago" placeholder="Ej. Yape / Plin / Efectivo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Fecha de Pago / Vencimiento</label>
+                        <input type="date" class="form-control form-control-sm" name="fecha_pago" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold">Guardar Cliente</button>
+                </form>
+            </div>
+
+            <!-- Botón / Tarjeta Elegante para ver QR Yape -->
+            <div class="card border-0 shadow-sm p-3 bg-white text-center mb-4 qr-preview-card" data-bs-toggle="modal" data-bs-target="#qrYapeModal">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="text-start">
+                        <h6 class="fw-bold text-primary mb-0"><i class="bi bi-qr-code-scan"></i> Renovar Suscripción</h6>
+                        <small class="text-muted extra-small">Haz clic para ver/ocultar el QR de Yape</small>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary fw-bold">
+                        Ver QR
+                    </button>
+                </div>
+            </div>
+
+            <!-- Plantilla de Mensaje -->
+            <div class="card border-0 shadow-sm p-4 bg-white">
+                <h5 class="fw-bold mb-2 text-primary"><i class="bi bi-chat-text"></i> Plantilla de Mensaje</h5>
+                <p class="text-muted extra-small mb-2">Variables disponibles: <code>{nombre}</code>, <code>{monto}</code>, <code>{fecha}</code>, <code>{forma_pago}</code>, <code>{empresa}</code></p>
+                <form action="/guardar_plantilla" method="POST">
+                    <textarea class="form-control form-control-sm mb-2" name="plantilla_mensaje" rows="4" required>{{ plantilla }}</textarea>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success btn-sm w-100">Guardar Plantilla</button>
+                        <a href="/restablecer_plantilla" class="btn btn-outline-secondary btn-sm">Restablecer</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Tabla de Clientes e Historial -->
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm p-4 bg-white mb-4">
+                <h5 class="fw-bold mb-3 text-primary"><i class="bi bi-people"></i> Lista de Cobranzas</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Teléfono</th>
+                                <th>Monto</th>
+                                <th>Forma Pago</th>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in clientes %}
+                            <tr>
+                                <td><strong>{{ c.nombre }}</strong></td>
+                                <td>{{ c.telefono }}</td>
+                                <td>S/ {{ "%.2f"|format(c.monto) }}</td>
+                                <td>{{ c.forma_pago }}</td>
+                                <td>{{ c.fecha_pago }}</td>
+                                <td>
+                                    {% if c.estado == 'Pagado' %}
+                                        <span class="badge bg-success">Pagado</span>
+                                    {% elif c.estado == 'Enviado' %}
+                                        <span class="badge bg-info text-dark">Enviado</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">Pendiente</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if c.estado != 'Pagado' %}
+                                    <a href="/marcar_pagado/{{ c.id }}" class="btn btn-sm btn-outline-success py-0 px-1" title="Marcar como Pagado">
+                                        <i class="bi bi-check-circle"></i>
+                                    </a>
+                                    {% endif %}
+                                    <a href="/eliminar/{{ c.id }}" class="btn btn-sm btn-outline-danger py-0 px-1" title="Eliminar" onclick="return confirm('¿Seguro de eliminar este registro?')">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-3">No hay clientes registrados.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Bitácora de Envíos -->
+            <div class="card border-0 shadow-sm p-4 bg-white">
+                <h5 class="fw-bold mb-3 text-primary"><i class="bi bi-journal-text"></i> Historial de WhatsApp</h5>
+                <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                    <table class="table table-sm table-striped small">
+                        <thead>
+                            <tr>
+                                <th>Fecha/Hora</th>
+                                <th>Cliente</th>
+                                <th>Teléfono</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for h in historial %}
+                            <tr>
+                                <td>{{ h.fecha_hora }}</td>
+                                <td>{{ h.nombre_cliente }}</td>
+                                <td>{{ h.telefono }}</td>
+                                <td>
+                                    {% if h.estado == 'Exitoso' %}
+                                        <span class="text-success fw-bold">Enviado</span>
+                                    {% else %}
+                                        <span class="text-danger fw-bold">Fallido</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">Sin historial de envíos.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PIE DE PÁGINA CON POLÍTICAS -->
+    <footer class="text-center mt-5 text-muted small">
+        <p class="mb-0">
+            © 2026 Cobra Fácil — 
+            <a href="/privacidad" target="_blank" class="text-decoration-none">Política de Privacidad</a> | 
+            <a href="/terminos" target="_blank" class="text-decoration-none">Términos y Condiciones</a>
+        </p>
+    </footer>
+
+</div>
+
+<!-- MODAL VENTANA EMERGENTE PARA EL QR DE YAPE -->
+<div class="modal fade" id="qrYapeModal" tabindex="-1" aria-labelledby="qrYapeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title fw-bold text-primary" id="qrYapeModalLabel"><i class="bi bi-qr-code"></i> Renovar por Yape</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <img src="/static/qr_yape_nuevo.png" alt="QR Yape" class="img-fluid rounded border p-2 mb-3 shadow-sm" style="max-height: 250px;" onerror="this.src='https://via.placeholder.com/200?text=QR+No+Encontrado'">
+                <p class="text-muted extra-small mb-0">Escanea con la app de Yape para renovar tu suscripción. Luego notifica a soporte para su activación.</p>
+            </div>
+            <div class="modal-footer border-0 pt-0 justify-content-center">
+                <button type="button" class="btn btn-secondary btn-sm px-4 rounded-pill" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Cobra Fácil</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .login-card {
+            max-width: 400px;
+            margin: 80px auto;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card login-card p-4 bg-white">
+        <div class="text-center mb-4">
+            <img src="/static/logo.png" alt="Logo" class="img-fluid mb-2" style="max-height: 70px;" onerror="this.style.display='none'">
+            <h4 class="fw-bold text-primary">Cobra Fácil</h4>
+            <p class="text-muted small">Ingresa tus credenciales</p>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger p-2 small text-center" role="alert">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form action="/login" method="POST">
+            <div class="mb-3">
+                <label for="usuario" class="form-label small fw-bold">Usuario</label>
+                <input type="text" class="form-control" id="usuario" name="usuario" placeholder="Ej. juanperez" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="password" class="form-label small fw-bold">Contraseña</label>
+                <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 fw-bold">Iniciar Sesión</button>
+        </form>
+
+        <div class="text-center mt-3">
+            <small class="text-muted">¿No tienes cuenta? <a href="/registro">Regístrate aquí</a></small>
+        </div>
+
+        <!-- PIE DE PÁGINA CON POLÍTICAS -->
+        <footer class="text-center mt-4 text-muted small">
+            <p class="mb-0">
+                © 2026 Cobra Fácil — 
+                <a href="/privacidad" target="_blank" class="text-decoration-none">Política de Privacidad</a> | 
+                <a href="/terminos" target="_blank" class="text-decoration-none">Términos y Condiciones</a>
+            </p>
+        </footer>
+    </div>
+</div>
+
+</body>
+</html>
