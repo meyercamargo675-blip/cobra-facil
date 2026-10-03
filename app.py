@@ -281,10 +281,11 @@ async def do_registro(
         conn.commit()
         usuario_id = cursor.lastrowid
 
-        fecha_vence = (datetime.now(pytz.timezone('America/Lima')) + timedelta(days=30)).strftime("%Y-%m-%d")
+        # Los nuevos usuarios se registran con la suscripción VENCIDA por defecto (requieren pago)
+        fecha_vence_vencida = "2026-01-01"
         cursor.execute(
             "INSERT INTO configuraciones (usuario_id, plantilla, suscripcion_hasta) VALUES (?, ?, ?)",
-            (usuario_id, PLANTILLA_POR_DEFECTO, fecha_vence)
+            (usuario_id, PLANTILLA_POR_DEFECTO, fecha_vence_vencida)
         )
         conn.commit()
 
@@ -325,26 +326,21 @@ async def index(request: Request):
         hoy_str = datetime.now(pytz.timezone('America/Lima')).strftime("%Y-%m-%d")
 
         if not config:
-            fecha_vence = (datetime.now(pytz.timezone('America/Lima')) + timedelta(days=30)).strftime("%Y-%m-%d")
+            # Si no existe configuración previa, nace vencida
+            fecha_vence_vencida = "2026-01-01"
             cursor.execute(
                 "INSERT INTO configuraciones (usuario_id, plantilla, suscripcion_hasta) VALUES (?, ?, ?)",
-                (user["id"], PLANTILLA_POR_DEFECTO, fecha_vence)
+                (user["id"], PLANTILLA_POR_DEFECTO, fecha_vence_vencida)
             )
             conn.commit()
             plantilla = PLANTILLA_POR_DEFECTO
-            suscripcion_hasta = fecha_vence
+            suscripcion_hasta = fecha_vence_vencida
         else:
             plantilla = config["plantilla"]
             suscripcion_hasta = config["suscripcion_hasta"]
-            
-            # AUTO-CORRECCIÓN: Si la suscripción estaba vencida o malograda, la actualizamos automáticamente a 30 días
-            if suscripcion_hasta < hoy_str:
-                suscripcion_hasta = (datetime.now(pytz.timezone('America/Lima')) + timedelta(days=30)).strftime("%Y-%m-%d")
-                cursor.execute("UPDATE configuraciones SET suscripcion_hasta = ? WHERE usuario_id = ?", (suscripcion_hasta, user["id"]))
-                conn.commit()
 
         suscripcion_activa = suscripcion_hasta >= hoy_str
-        suscripcion_estado = "Activa" if suscripcion_activa else "Inactiva / Vencida"
+        suscripcion_estado = "Activa" if suscripcion_activa else "Inactiva / Vencida (Requiere Pago)"
 
         cursor.execute("SELECT * FROM clientes WHERE usuario_id = ? ORDER BY id DESC", (user["id"],))
         clientes = cursor.fetchall()
