@@ -40,7 +40,7 @@ templates = Jinja2Templates(directory="templates")
 DB_NAME = "cobro_bot.db"
 
 def get_db():
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=30.0)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -166,6 +166,8 @@ async def view_terminos(request: Request):
 
 @app.get("/login", response_class=HTMLResponse)
 async def view_login(request: Request):
+    if request.session.get("user_id"):
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     return templates.TemplateResponse(request=request, name="login.html", context={"error": None})
 
 @app.post("/login", response_class=HTMLResponse)
@@ -176,8 +178,8 @@ async def do_login(
     password: Optional[str] = Form(None),
     clave: Optional[str] = Form(None)
 ):
-    usr = usuario or username
-    pwd = password or clave
+    usr = (usuario or username or "").strip()
+    pwd = (password or clave or "").strip()
 
     if not usr or not pwd:
         return templates.TemplateResponse(request=request, name="login.html", context={"error": "Completa todos los campos."})
@@ -200,6 +202,8 @@ async def do_login(
 
 @app.get("/registro", response_class=HTMLResponse)
 async def view_registro(request: Request):
+    if request.session.get("user_id"):
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     return templates.TemplateResponse(request=request, name="registro.html", context={"error": None})
 
 @app.post("/registro", response_class=HTMLResponse)
@@ -210,14 +214,17 @@ async def do_registro(
     password: Optional[str] = Form(None),
     empresa: Optional[str] = Form(None)
 ):
-    usr = usuario or username
-    if not usr or not password or not empresa:
+    usr = (usuario or username or "").strip()
+    pwd = (password or "").strip()
+    emp = (empresa or "").strip()
+
+    if not usr or not pwd or not emp:
         return templates.TemplateResponse(request=request, name="registro.html", context={"error": "Llena todos los campos."})
 
     conn = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute("INSERT INTO usuarios (usuario, password, empresa) VALUES (?, ?, ?)", (usr, password, empresa))
+        cursor.execute("INSERT INTO usuarios (usuario, password, empresa) VALUES (?, ?, ?)", (usr, pwd, emp))
         conn.commit()
         usuario_id = cursor.lastrowid
 
@@ -227,10 +234,10 @@ async def do_registro(
 
         request.session["user_id"] = usuario_id
         request.session["usuario"] = usr
-        request.session["empresa"] = empresa
+        request.session["empresa"] = emp
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     except sqlite3.IntegrityError:
-        return templates.TemplateResponse(request=request, name="registro.html", context={"error": "El usuario ya existe."})
+        return templates.TemplateResponse(request=request, name="registro.html", context={"error": "El usuario ya existe. Elige otro nombre."})
     finally:
         conn.close()
 
@@ -253,7 +260,6 @@ async def index(request: Request):
 
         hoy_str = datetime.now(pytz.timezone('America/Lima')).strftime("%Y-%m-%d")
 
-        # SOLO SI EL USUARIO ES EXACTAMENTE "2024M" TIENE ACCESO DE ADMINISTRADOR/AUTORRENOVACIÓN INFINITA
         if user["usuario"] == "2024M":
             futuro_admin = (datetime.now(pytz.timezone('America/Lima')) + timedelta(days=365)).strftime("%Y-%m-%d")
             if not config:
@@ -302,7 +308,6 @@ async def index(request: Request):
             "clientes": clientes,
             "plantilla": plantilla,
             "suscripcion_estado": suscripcion_estado,
-            "suscripcion_vence": "",
             "suscripcion_activa": suscripcion_activa,
             "total_cobrado": total_cobrado,
             "total_pendiente": total_pendiente,
@@ -310,6 +315,47 @@ async def index(request: Request):
             "mensaje_alerta": mensaje_alerta
         }
     )
+
+@app.get("/renovar_usuario/{nombre_usuario}")
+async def renovar_usuario_admin(request: Request, nombre_usuario: str):
+    user = obtener_usuario_actual(request)
+    if not user or user["usuario"] != "2024M":
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    tz_peru = pytz.timezone('America/Lima')
+    hoy = datetime.now(tz_peru)
+    
+    try:
+        cursor.execute("SELECT * FROM usuarios WHERE usuario = ?", (nombre_usuario,))
+        cliente_saas = cursor.fetchone()
+        
+        if cliente_saas:
+            cursor.execute("SELECT * FROM configuraciones WHERE usuario_id = ?", (cliente_saas["id"],))
+            config_cliente = cursor.fetchone()
+            
+            hoy_str = hoy.strftime("%Y-%m-%d")
+            if config_cliente and config_cliente["suscripcion_hasta"] >= hoy_str:
+                base_fecha = datetime.strptime(config_cliente["suscripcion_hasta"], "%Y-%m-%d")
+            else:
+                base_fecha = hoy
+                
+            nueva_fecha = (base_fecha + timedelta(days=30)).strftime("%Y-%m-%d")
+            
+            if config_cliente:
+                cursor.execute("UPDATE configuraciones SET suscripcion_hasta = ? WHERE usuario_id = ?", (nueva_fecha, cliente_saas["id"]))
+            else:
+                cursor.execute("INSERT INTO configuraciones (usuario_id, plantilla, suscripcion_hasta) VALUES (?, ?, ?)", (cliente_saas["id"], PLANTILLA_POR_DEFECTO, nueva_fecha))
+            
+            conn.commit()
+            request.session["mensaje_alerta"] = f"¡Suscripción renovada con éxito para {nombre_usuario} hasta el {nueva_fecha}!"
+        else:
+            request.session["mensaje_alerta"] = f"El usuario {nombre_usuario} no existe."
+    finally:
+        conn.close()
+        
+    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 @app.post("/agregar")
 async def agregar_cliente(request: Request, nombre: str = Form(...), telefono: str = Form(...), monto: float = Form(...), forma_pago: str = Form(...), fecha_pago: str = Form(...)):
