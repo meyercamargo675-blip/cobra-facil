@@ -281,7 +281,6 @@ async def do_registro(
         conn.commit()
         usuario_id = cursor.lastrowid
 
-        # Los nuevos usuarios se registran con la suscripción VENCIDA por defecto (requieren pago)
         fecha_vence_vencida = "2026-01-01"
         cursor.execute(
             "INSERT INTO configuraciones (usuario_id, plantilla, suscripcion_hasta) VALUES (?, ?, ?)",
@@ -339,7 +338,6 @@ async def index(request: Request):
             suscripcion_hasta = config["suscripcion_hasta"]
 
         suscripcion_activa = suscripcion_hasta >= hoy_str
-        # Estado limpio sin mostrar fechas técnicas feas en pantalla
         suscripcion_estado = "Activa" if suscripcion_activa else "Vencido (Requiere Renovación)"
 
         cursor.execute("SELECT * FROM clientes WHERE usuario_id = ? ORDER BY id DESC", (user["id"],))
@@ -368,7 +366,6 @@ async def index(request: Request):
             "clientes": clientes,
             "plantilla": plantilla,
             "suscripcion_estado": suscripcion_estado,
-            # Se oculta la fecha enviando un texto vacío o neutro al template
             "suscripcion_vence": "", 
             "suscripcion_activa": suscripcion_activa,
             "total_cobrado": total_cobrado,
@@ -521,17 +518,18 @@ async def restablecer_plantilla(request: Request):
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 
-# --- RENOVACIÓN DE SUSCRIPCIÓN (PROTEGIDA POR ID Y LLAVE 2024M) ---
+# --- RENOVACIÓN DE SUSCRIPCIÓN (PROTEGIDA ÚNICAMENTE CON LA LLAVE 2024M) ---
 @app.get("/admin/renovar_suscripcion/{usuario_id_destino}")
 async def renovar_suscripcion_admin(request: Request, usuario_id_destino: int, clave: str = ""):
     user = obtener_usuario_actual(request)
     if not user:
         return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
 
+    # La única llave requerida es 2024M
     CLAVE_ADMIN_SECRETA = "2024M"
 
-    if user["id"] != 1 or clave != CLAVE_ADMIN_SECRETA:
-        request.session["mensaje_alerta"] = "Acceso denegado: Credenciales de administrador inválidas."
+    if clave != CLAVE_ADMIN_SECRETA:
+        request.session["mensaje_alerta"] = "Acceso denegado: Llave secreta incorrecta."
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
     conn = get_db()
@@ -552,7 +550,7 @@ async def renovar_suscripcion_admin(request: Request, usuario_id_destino: int, c
 
             cursor.execute("UPDATE configuraciones SET suscripcion_hasta = ? WHERE usuario_id = ?", (nueva_fecha, usuario_id_destino))
             conn.commit()
-            request.session["mensaje_alerta"] = f"¡Suscripción del usuario #{usuario_id_destino} renovada exitosamente por 30 días más!"
+            request.session["mensaje_alerta"] = f"¡Suscripción del usuario #{usuario_id_destino} renovada exitosamente hasta el {nueva_fecha}!"
     finally:
         conn.close()
 
