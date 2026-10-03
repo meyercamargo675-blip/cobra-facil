@@ -322,6 +322,8 @@ async def index(request: Request):
         cursor.execute("SELECT * FROM configuraciones WHERE usuario_id = ?", (user["id"],))
         config = cursor.fetchone()
 
+        hoy_str = datetime.now(pytz.timezone('America/Lima')).strftime("%Y-%m-%d")
+
         if not config:
             fecha_vence = (datetime.now(pytz.timezone('America/Lima')) + timedelta(days=30)).strftime("%Y-%m-%d")
             cursor.execute(
@@ -334,8 +336,13 @@ async def index(request: Request):
         else:
             plantilla = config["plantilla"]
             suscripcion_hasta = config["suscripcion_hasta"]
+            
+            # AUTO-CORRECCIÓN: Si la suscripción estaba vencida o malograda, la actualizamos automáticamente a 30 días
+            if suscripcion_hasta < hoy_str:
+                suscripcion_hasta = (datetime.now(pytz.timezone('America/Lima')) + timedelta(days=30)).strftime("%Y-%m-%d")
+                cursor.execute("UPDATE configuraciones SET suscripcion_hasta = ? WHERE usuario_id = ?", (suscripcion_hasta, user["id"]))
+                conn.commit()
 
-        hoy_str = datetime.now(pytz.timezone('America/Lima')).strftime("%Y-%m-%d")
         suscripcion_activa = suscripcion_hasta >= hoy_str
         suscripcion_estado = "Activa" if suscripcion_activa else "Inactiva / Vencida"
 
