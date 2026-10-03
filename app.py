@@ -326,7 +326,6 @@ async def index(request: Request):
         hoy_str = datetime.now(pytz.timezone('America/Lima')).strftime("%Y-%m-%d")
 
         if not config:
-            # Si no existe configuración previa, nace vencida
             fecha_vence_vencida = "2026-01-01"
             cursor.execute(
                 "INSERT INTO configuraciones (usuario_id, plantilla, suscripcion_hasta) VALUES (?, ?, ?)",
@@ -520,12 +519,17 @@ async def restablecer_plantilla(request: Request):
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 
-# --- RENOVACIÓN DE SUSCRIPCIÓN ---
+# --- RENOVACIÓN DE SUSCRIPCIÓN (PROTEGIDA: SOLO ADMIN ID 1) ---
 @app.get("/admin/renovar_suscripcion/{usuario_id_destino}")
 async def renovar_suscripcion_admin(request: Request, usuario_id_destino: int):
     user = obtener_usuario_actual(request)
     if not user:
         return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
+
+    # SEGURIDAD: Validar que el usuario actual sea el Administrador (ID 1)
+    if user["id"] != 1:
+        request.session["mensaje_alerta"] = "Acceso denegado: No tienes permisos de administrador."
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
     conn = get_db()
     cursor = conn.cursor()
@@ -545,7 +549,7 @@ async def renovar_suscripcion_admin(request: Request, usuario_id_destino: int):
 
             cursor.execute("UPDATE configuraciones SET suscripcion_hasta = ? WHERE usuario_id = ?", (nueva_fecha, usuario_id_destino))
             conn.commit()
-            request.session["mensaje_alerta"] = f"¡Suscripción renovada exitosamente hasta el {nueva_fecha}!"
+            request.session["mensaje_alerta"] = f"¡Suscripción del usuario #{usuario_id_destino} renovada exitosamente hasta el {nueva_fecha}!"
     finally:
         conn.close()
 
