@@ -166,8 +166,6 @@ async def view_terminos(request: Request):
 
 @app.get("/login", response_class=HTMLResponse)
 async def view_login(request: Request):
-    if request.session.get("user_id"):
-        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     return templates.TemplateResponse(request=request, name="login.html", context={"error": None})
 
 @app.post("/login", response_class=HTMLResponse)
@@ -202,8 +200,6 @@ async def do_login(
 
 @app.get("/registro", response_class=HTMLResponse)
 async def view_registro(request: Request):
-    if request.session.get("user_id"):
-        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     return templates.TemplateResponse(request=request, name="registro.html", context={"error": None})
 
 @app.post("/registro", response_class=HTMLResponse)
@@ -308,6 +304,7 @@ async def index(request: Request):
             "clientes": clientes,
             "plantilla": plantilla,
             "suscripcion_estado": suscripcion_estado,
+            "suscripcion_vence": "",
             "suscripcion_activa": suscripcion_activa,
             "total_cobrado": total_cobrado,
             "total_pendiente": total_pendiente,
