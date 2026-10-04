@@ -37,7 +37,8 @@ os.makedirs("templates", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-DB_NAME = "cobro_bot.db"
+# Usamos una base de datos nueva para evitar conflictos de datos anteriores
+DB_NAME = "cobrobot_v2.db"
 
 def get_db():
     conn = sqlite3.connect(DB_NAME, timeout=30.0)
