@@ -37,7 +37,6 @@ os.makedirs("templates", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-# Usamos una base de datos nueva para evitar conflictos de datos anteriores
 DB_NAME = "cobrobot_v2.db"
 
 def get_db():
@@ -216,7 +215,7 @@ async def do_registro(request: Request):
         usuario_id = cursor.lastrowid
 
         vencimiento_inicial = (datetime.now(pytz.timezone('America/Lima')) + timedelta(days=3)).strftime("%Y-%m-%d")
-        cursor.execute("INSERT INTO configuraciones (usuario_id, plantilla, suscripcion_hasta) VALUES (?, ?, ?)", (usuario_id, PLANTILLA_POR_DEFECTO, vencimiento_inicial))
+        cursor.execute("INSERT OR IGNORE INTO configuraciones (usuario_id, plantilla, suscripcion_hasta) VALUES (?, ?, ?)", (usuario_id, PLANTILLA_POR_DEFECTO, vencimiento_inicial))
         conn.commit()
 
         request.session["user_id"] = usuario_id
@@ -242,29 +241,30 @@ async def index(request: Request):
     conn = get_db()
     cursor = conn.cursor()
     try:
+        hoy_str = datetime.now(pytz.timezone('America/Lima')).strftime("%Y-%m-%d")
+
         cursor.execute("SELECT * FROM configuraciones WHERE usuario_id = ?", (user["id"],))
         config = cursor.fetchone()
-
-        hoy_str = datetime.now(pytz.timezone('America/Lima')).strftime("%Y-%m-%d")
 
         if user["usuario"] == "2024M":
             futuro_admin = (datetime.now(pytz.timezone('America/Lima')) + timedelta(days=365)).strftime("%Y-%m-%d")
             if not config:
-                cursor.execute("INSERT INTO configuraciones (usuario_id, plantilla, suscripcion_hasta) VALUES (?, ?, ?)", (user["id"], PLANTILLA_POR_DEFECTO, futuro_admin))
+                cursor.execute("INSERT OR IGNORE INTO configuraciones (usuario_id, plantilla, suscripcion_hasta) VALUES (?, ?, ?)", (user["id"], PLANTILLA_POR_DEFECTO, futuro_admin))
                 conn.commit()
             else:
                 cursor.execute("UPDATE configuraciones SET suscripcion_hasta = ? WHERE usuario_id = ?", (futuro_admin, user["id"]))
                 conn.commit()
-
-        if not config:
+            cursor.execute("SELECT * FROM configuraciones WHERE usuario_id = ?", (user["id"],))
+            config = cursor.fetchone()
+        elif not config:
             vencimiento_inicial = (datetime.now(pytz.timezone('America/Lima')) + timedelta(days=3)).strftime("%Y-%m-%d")
-            cursor.execute("INSERT INTO configuraciones (usuario_id, plantilla, suscripcion_hasta) VALUES (?, ?, ?)", (user["id"], PLANTILLA_POR_DEFECTO, vencimiento_inicial))
+            cursor.execute("INSERT OR IGNORE INTO configuraciones (usuario_id, plantilla, suscripcion_hasta) VALUES (?, ?, ?)", (user["id"], PLANTILLA_POR_DEFECTO, vencimiento_inicial))
             conn.commit()
-            plantilla = PLANTILLA_POR_DEFECTO
-            suscripcion_hasta = vencimiento_inicial
-        else:
-            plantilla = config["plantilla"]
-            suscripcion_hasta = config["suscripcion_hasta"]
+            cursor.execute("SELECT * FROM configuraciones WHERE usuario_id = ?", (user["id"],))
+            config = cursor.fetchone()
+
+        plantilla = config["plantilla"] if config else PLANTILLA_POR_DEFECTO
+        suscripcion_hasta = config["suscripcion_hasta"] if config else hoy_str
 
         suscripcion_activa = suscripcion_hasta >= hoy_str
         suscripcion_estado = "Activa" if suscripcion_activa else "Vencido (Requiere Renovación)"
@@ -273,10 +273,12 @@ async def index(request: Request):
         clientes = cursor.fetchall()
 
         cursor.execute("SELECT SUM(monto) as total FROM clientes WHERE usuario_id = ? AND estado = 'Pagado'", (user["id"],))
-        total_cobrado = cursor.fetchone()["total"] or 0.0
+        row_cobrado = cursor.fetchone()
+        total_cobrado = row_cobrado["total"] if row_cobrado and row_cobrado["total"] else 0.0
 
         cursor.execute("SELECT SUM(monto) as total FROM clientes WHERE usuario_id = ? AND estado != 'Pagado'", (user["id"],))
-        total_pendiente = cursor.fetchone()["total"] or 0.0
+        row_pendiente = cursor.fetchone()
+        total_pendiente = row_pendiente["total"] if row_pendiente and row_pendiente["total"] else 0.0
 
         cursor.execute("SELECT * FROM bitacora_whatsapp WHERE usuario_id = ? ORDER BY id DESC LIMIT 50", (user["id"],))
         historial = cursor.fetchall()
@@ -334,7 +336,7 @@ async def renovar_usuario_admin(request: Request, nombre_usuario: str):
             if config_cliente:
                 cursor.execute("UPDATE configuraciones SET suscripcion_hasta = ? WHERE usuario_id = ?", (nueva_fecha, cliente_saas["id"]))
             else:
-                cursor.execute("INSERT INTO configuraciones (usuario_id, plantilla, suscripcion_hasta) VALUES (?, ?, ?)", (cliente_saas["id"], PLANTILLA_POR_DEFECTO, nueva_fecha))
+                cursor.execute("INSERT OR IGNORE INTO configuraciones (usuario_id, plantilla, suscripcion_hasta) VALUES (?, ?, ?)", (cliente_saas["id"], PLANTILLA_POR_DEFECTO, nueva_fecha))
             
             conn.commit()
             request.session["mensaje_alerta"] = f"¡Suscripción renovada con éxito para {nombre_usuario} hasta el {nueva_fecha}!"
