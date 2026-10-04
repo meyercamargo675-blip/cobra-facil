@@ -169,15 +169,10 @@ async def view_login(request: Request):
     return templates.TemplateResponse(request=request, name="login.html", context={"error": None})
 
 @app.post("/login", response_class=HTMLResponse)
-async def do_login(
-    request: Request,
-    usuario: Optional[str] = Form(None),
-    username: Optional[str] = Form(None),
-    password: Optional[str] = Form(None),
-    clave: Optional[str] = Form(None)
-):
-    usr = (usuario or username or "").strip()
-    pwd = (password or clave or "").strip()
+async def do_login(request: Request):
+    form = await request.form()
+    usr = str(form.get("usuario") or form.get("username") or "").strip()
+    pwd = str(form.get("password") or form.get("clave") or "").strip()
 
     if not usr or not pwd:
         return templates.TemplateResponse(request=request, name="login.html", context={"error": "Completa todos los campos."})
@@ -203,16 +198,11 @@ async def view_registro(request: Request):
     return templates.TemplateResponse(request=request, name="registro.html", context={"error": None})
 
 @app.post("/registro", response_class=HTMLResponse)
-async def do_registro(
-    request: Request,
-    usuario: Optional[str] = Form(None),
-    username: Optional[str] = Form(None),
-    password: Optional[str] = Form(None),
-    empresa: Optional[str] = Form(None)
-):
-    usr = (usuario or username or "").strip()
-    pwd = (password or "").strip()
-    emp = (empresa or "").strip()
+async def do_registro(request: Request):
+    form = await request.form()
+    usr = str(form.get("usuario") or form.get("username") or "").strip()
+    pwd = str(form.get("password") or form.get("clave") or "").strip()
+    emp = str(form.get("empresa") or form.get("company") or "").strip()
 
     if not usr or not pwd or not emp:
         return templates.TemplateResponse(request=request, name="registro.html", context={"error": "Llena todos los campos."})
