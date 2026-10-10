@@ -6,19 +6,22 @@
     <title>CobroBot - Panel de Control</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50 min-h-screen flex flex-col">
+<body class="bg-gray-100 min-h-screen flex flex-col font-sans">
 
     <!-- Navbar -->
-    <nav class="bg-indigo-600 text-white shadow-md">
+    <nav class="bg-indigo-700 text-white shadow-lg sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center space-x-3">
-                <span class="text-xl font-bold">🤖 CobroBot</span>
-                <span class="bg-indigo-700 text-xs px-2 py-1 rounded">Empresa: {{ empresa }}</span>
+            <div class="flex items-center space-x-2">
+                <span class="text-xl font-extrabold tracking-wide">🤖 CobroBot</span>
+                <span class="bg-indigo-800 text-indigo-200 text-xs px-2.5 py-0.5 rounded-full font-medium hidden sm:inline">{{ empresa }}</span>
             </div>
-            <div class="flex items-center space-x-4">
-                <span class="text-sm hidden sm:inline">Usuario: <strong>{{ usuario }}</strong></span>
-                <span class="text-xs bg-emerald-500 text-white px-2 py-1 rounded font-semibold">Estado: {{ suscripcion_estado }}</span>
-                <a href="/logout" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded text-sm transition">Cerrar Sesión</a>
+            <div class="flex items-center space-x-3">
+                <span class="text-xs bg-emerald-500 text-white px-2.5 py-1 rounded-full font-semibold shadow-sm">
+                    ● {{ suscripcion_estado }}
+                </span>
+                <a href="/logout" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition shadow-sm">
+                    Salir
+                </a>
             </div>
         </div>
     </nav>
@@ -26,8 +29,8 @@
     <!-- Alerta emergente -->
     {% if mensaje_alerta %}
     <div class="max-w-7xl mx-auto px-4 mt-4 w-full">
-        <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded shadow-sm flex justify-between items-center" role="alert">
-            <p>{{ mensaje_alerta }}</p>
+        <div class="bg-indigo-50 border-l-4 border-indigo-600 text-indigo-900 p-3.5 rounded-r-lg shadow-sm text-sm flex justify-between items-center">
+            <p class="font-medium">✨ {{ mensaje_alerta }}</p>
         </div>
     </div>
     {% endif %}
@@ -35,122 +38,141 @@
     <!-- Contenido Principal -->
     <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full space-y-6">
 
-        <!-- Tarjetas de Resumen y QR -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-white p-5 rounded-lg shadow border border-gray-100 flex items-center justify-between">
-                <div>
-                    <p class="text-gray-500 text-sm">Total Cobrado (Pagado)</p>
-                    <h3 class="text-2xl font-bold text-emerald-600">S/ {{ "%.2f"|format(total_cobrado) }}</h3>
+        <!-- Tarjetas de Resumen Financiero -->
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-200/80 flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Cobrado</span>
+                    <span class="bg-emerald-100 text-emerald-700 p-1.5 rounded-xl text-xs font-bold">✓</span>
                 </div>
-                <div class="bg-emerald-100 p-3 rounded-full text-emerald-600 font-bold">✓</div>
+                <h3 class="text-xl sm:text-2xl font-black text-emerald-600">S/ {{ "%.2f"|format(total_cobrado) }}</h3>
             </div>
-            <div class="bg-white p-5 rounded-lg shadow border border-gray-100 flex items-center justify-between">
-                <div>
-                    <p class="text-gray-500 text-sm">Total Pendiente</p>
-                    <h3 class="text-2xl font-bold text-amber-600">S/ {{ "%.2f"|format(total_pendiente) }}</h3>
+
+            <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-200/80 flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pendiente</span>
+                    <span class="bg-amber-100 text-amber-700 p-1.5 rounded-xl text-xs font-bold">⏳</span>
                 </div>
-                <div class="bg-amber-100 p-3 rounded-full text-amber-600 font-bold">⏳</div>
-            </div>
-            <!-- Tarjeta de Código QR de Yape / Pagos -->
-            <div class="bg-white p-4 rounded-lg shadow border border-gray-100 flex flex-col items-center justify-center text-center">
-                <p class="text-gray-500 text-xs mb-2 font-semibold">Mi Código QR (Yape / Plin)</p>
-                <div class="w-24 h-24 bg-gray-100 border border-gray-200 rounded flex items-center justify-center overflow-hidden mb-1">
-                    <!-- Si tienes una imagen QR guardada en static/qr.png se mostrará aquí -->
-                    <img src="/static/qr.png" alt="QR Yape" onerror="this.style.display='none'; document.getElementById('no-qr').style.display='block';" class="w-full h-full object-contain">
-                    <span id="no-qr" style="display:none;" class="text-[10px] text-gray-400 p-1">Sube qr.png a static/</span>
-                </div>
-                <span class="text-[10px] text-gray-400">(Imagen colocada en la carpeta static)</span>
+                <h3 class="text-xl sm:text-2xl font-black text-amber-600">S/ {{ "%.2f"|format(total_pendiente) }}</h3>
             </div>
         </div>
 
-        <!-- Acciones y Botones Principales -->
-        <div class="bg-white p-6 rounded-lg shadow border border-gray-100 flex flex-wrap gap-4 items-center justify-between">
-            <div class="flex flex-wrap gap-3">
-                <a href="/probar" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded text-sm font-medium transition shadow-sm">🚀 Ejecutar Envíos Manuales</a>
-                <a href="/exportar_excel" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded text-sm font-medium transition shadow-sm">📊 Exportar Reporte CSV</a>
+        <!-- Barra de Acciones Rápidas -->
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200/80 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+            <div class="flex flex-col sm:flex-row gap-2.5 w-full sm:w-auto">
+                <a href="/probar" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold text-center transition shadow-sm flex items-center justify-center space-x-1.5">
+                    <span>🚀</span> <span>Ejecutar Envíos Manuales</span>
+                </a>
+                <button onclick="toggleModalQR()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold text-center transition shadow-sm flex items-center justify-center space-x-1.5">
+                    <span>📱</span> <span>Ver QR de Pago (Yape / Plin)</span>
+                </button>
+                <a href="/exportar_excel" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2.5 rounded-xl text-xs font-bold text-center transition shadow-sm flex items-center justify-center space-x-1.5">
+                    <span>📊</span> <span>Exportar Reporte</span>
+                </a>
             </div>
+
             {% if usuario == '2024M' %}
-            <div class="bg-purple-50 border border-purple-200 p-3 rounded text-xs text-purple-700">
-                🔑 Panel Admin Activo. Usa <code class="bg-purple-100 px-1 py-0.5 rounded">/renovar_usuario/nombre_cliente</code> en la barra del navegador para renovar cuentas por 30 días.
+            <div class="bg-purple-50 border border-purple-200 p-2.5 rounded-xl text-xs text-purple-800 font-medium text-center sm:text-right">
+                🔑 Admin: Utiliza <code class="bg-purple-100 px-1 py-0.5 rounded font-bold">/renovar_usuario/cliente</code> para renovar suscripciones.
             </div>
             {% endif %}
         </div>
 
+        <!-- Modal Emergent para el Código QR -->
+        <div id="modalQR" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl space-y-4 transform transition-all scale-100">
+                <div class="flex justify-between items-center border-b pb-3">
+                    <h3 class="font-bold text-gray-800 text-base">Código QR de Pago</h3>
+                    <button onclick="toggleModalQR()" class="text-gray-400 hover:text-gray-600 text-xl font-bold p-1">&times;</button>
+                </div>
+                <p class="text-xs text-gray-500">Escanea este código desde tu aplicación de **Yape** o **Plin** para realizar la transferencia.</p>
+                <div class="p-3 bg-gray-50 rounded-2xl border border-gray-100 flex justify-center items-center">
+                    <img src="/static/qr.png" alt="Código QR Yape / Plin" class="w-56 h-56 object-contain rounded-xl shadow-sm">
+                </div>
+                <button onclick="toggleModalQR()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-xs transition">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+
         <!-- Formulario para Agregar Cliente -->
-        <div class="bg-white p-6 rounded-lg shadow border border-gray-100">
-            <h2 class="text-lg font-semibold text-gray-800 mb-4">Agregar Nuevo Cliente a Cobrar</h2>
-            <form action="/agregar" method="POST" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200/80 space-y-4">
+            <h2 class="text-base font-bold text-gray-800 border-b pb-2">Registrar Nuevo Cobro</h2>
+            <form action="/agregar" method="POST" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Nombre del Cliente</label>
-                    <input type="text" name="nombre" required class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Nombre del Cliente</label>
+                    <input type="text" name="nombre" required placeholder="Ej: Juan Pérez" class="w-full border border-gray-300 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Teléfono (Ej: 987654321)</label>
-                    <input type="text" name="telefono" required placeholder="Ej: 987654321" class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Teléfono WhatsApp</label>
+                    <input type="text" name="telefono" required placeholder="Ej: 987654321" class="w-full border border-gray-300 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Monto (S/)</label>
-                    <input type="number" step="0.01" name="monto" required class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Monto (S/)</label>
+                    <input type="number" step="0.01" name="monto" required placeholder="0.00" class="w-full border border-gray-300 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Forma de Pago (Ej: Yape, Plin)</label>
-                    <input type="text" name="forma_pago" required placeholder="Ej: Yape" class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Método de Pago</label>
+                    <input type="text" name="forma_pago" required placeholder="Ej: Yape / Plin / Efectivo" class="w-full border border-gray-300 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Fecha de Cobro</label>
-                    <input type="date" name="fecha_pago" required class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Fecha Límite de Pago</label>
+                    <input type="date" name="fecha_pago" required class="w-full border border-gray-300 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
                 </div>
                 <div class="flex items-end">
-                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium p-2 rounded text-sm transition">Guardar Cliente</button>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-sm">
+                        + Guardar Cliente
+                    </button>
                 </div>
             </form>
         </div>
 
         <!-- Tabla de Clientes -->
-        <div class="bg-white rounded-lg shadow border border-gray-100 overflow-hidden">
-            <div class="p-4 border-b border-gray-200">
-                <h2 class="text-lg font-semibold text-gray-800">Lista de Clientes Registrados</h2>
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200/80 overflow-hidden">
+            <div class="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                <h2 class="text-base font-bold text-gray-800">Clientes Registrados</h2>
+                <span class="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full font-bold">{{ clientes|length }}</span>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
-                        <tr class="bg-gray-100 text-gray-600 text-xs uppercase tracking-wider">
-                            <th class="p-3">Cliente</th>
-                            <th class="p-3">Teléfono</th>
-                            <th class="p-3">Monto</th>
-                            <th class="p-3">Método de Pago</th>
-                            <th class="p-3">Fecha</th>
-                            <th class="p-3">Estado</th>
-                            <th class="p-3 text-center">Acciones</th>
+                        <tr class="bg-gray-100/70 text-gray-500 text-[11px] uppercase tracking-wider border-b border-gray-200">
+                            <th class="p-3.5 font-bold">Cliente</th>
+                            <th class="p-3.5 font-bold">Teléfono</th>
+                            <th class="p-3.5 font-bold">Monto</th>
+                            <th class="p-3.5 font-bold">Método</th>
+                            <th class="p-3.5 font-bold">Fecha</th>
+                            <th class="p-3.5 font-bold">Estado</th>
+                            <th class="p-3.5 font-bold text-center">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200 text-sm">
+                    <tbody class="divide-y divide-gray-100 text-xs">
                         {% for c in clientes %}
-                        <tr class="hover:bg-gray-50">
-                            <td class="p-3 font-medium text-gray-800">{{ c.nombre }}</td>
-                            <td class="p-3 text-gray-600">{{ c.telefono }}</td>
-                            <td class="p-3 text-gray-800">S/ {{ "%.2f"|format(c.monto) }}</td>
-                            <td class="p-3 text-gray-600 font-semibold text-indigo-600">{{ c.forma_pago }}</td>
-                            <td class="p-3 text-gray-600">{{ c.fecha_pago }}</td>
-                            <td class="p-3">
+                        <tr class="hover:bg-indigo-50/30 transition">
+                            <td class="p-3.5 font-semibold text-gray-900">{{ c.nombre }}</td>
+                            <td class="p-3.5 text-gray-600 font-mono">{{ c.telefono }}</td>
+                            <td class="p-3.5 font-bold text-gray-900">S/ {{ "%.2f"|format(c.monto) }}</td>
+                            <td class="p-3.5 text-indigo-600 font-semibold">{{ c.forma_pago }}</td>
+                            <td class="p-3.5 text-gray-600">{{ c.fecha_pago }}</td>
+                            <td class="p-3.5">
                                 {% if c.estado == 'Pagado' %}
-                                    <span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-semibold">Pagado</span>
+                                    <span class="bg-emerald-100 text-emerald-800 text-[10px] px-2.5 py-1 rounded-full font-bold">Pagado</span>
                                 {% elif c.estado == 'Enviado' %}
-                                    <span class="bg-blue-100 text-blue-800 text-xs px-2.5 py-1 rounded-full font-semibold">Aviso Enviado</span>
+                                    <span class="bg-blue-100 text-blue-800 text-[10px] px-2.5 py-1 rounded-full font-bold">Aviso Enviado</span>
                                 {% else %}
-                                    <span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-semibold">Pendiente</span>
+                                    <span class="bg-amber-100 text-amber-800 text-[10px] px-2.5 py-1 rounded-full font-bold">Pendiente</span>
                                 {% endif %}
                             </td>
-                            <td class="p-3 text-center space-x-2">
+                            <td class="p-3.5 text-center space-x-1.5 whitespace-nowrap">
                                 {% if c.estado != 'Pagado' %}
-                                <a href="/marcar_pagado/{{ c.id }}" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs px-3 py-1.5 rounded transition inline-block">Marcar Pagado</a>
+                                <a href="/marcar_pagado/{{ c.id }}" class="bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] px-2.5 py-1.5 rounded-lg font-bold transition inline-block">✓ Pagado</a>
                                 {% endif %}
-                                <a href="/eliminar/{{ c.id }}" onclick="return confirm('¿Estás seguro de eliminar este cliente?');" class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1.5 rounded transition inline-block">Eliminar</a>
+                                <a href="/eliminar/{{ c.id }}" onclick="return confirm('¿Deseas eliminar a este cliente?');" class="bg-red-500 hover:bg-red-600 text-white text-[11px] px-2.5 py-1.5 rounded-lg font-bold transition inline-block">Eliminar</a>
                             </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="7" class="p-6 text-center text-gray-400">No hay clientes registrados todavía. Agrega uno arriba.</td>
+                            <td colspan="7" class="p-8 text-center text-gray-400 font-medium">No hay clientes registrados en este momento.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -158,15 +180,17 @@
             </div>
         </div>
 
-        <!-- Configuración de Plantilla de Mensaje -->
-        <div class="bg-white p-6 rounded-lg shadow border border-gray-100">
-            <h2 class="text-lg font-semibold text-gray-800 mb-2">Personalizar Plantilla de Mensaje de WhatsApp</h2>
-            <p class="text-xs text-gray-500 mb-4">Puedes usar variables como <code class="bg-gray-100 px-1 rounded">{nombre}</code>, <code class="bg-gray-100 px-1 rounded">{monto}</code>, <code class="bg-gray-100 px-1 rounded">{fecha}</code>, <code class="bg-gray-100 px-1 rounded">{forma_pago}</code> y <code class="bg-gray-100 px-1 rounded">{empresa}</code>.</p>
+        <!-- Personalizar Plantilla de Mensaje -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200/80 space-y-3">
+            <h2 class="text-base font-bold text-gray-800">Plantilla de Mensaje WhatsApp</h2>
+            <p class="text-xs text-gray-500">Variables disponibles: <code class="bg-gray-100 px-1.5 py-0.5 rounded text-indigo-600 font-bold">{nombre}</code>, <code class="bg-gray-100 px-1.5 py-0.5 rounded text-indigo-600 font-bold">{monto}</code>, <code class="bg-gray-100 px-1.5 py-0.5 rounded text-indigo-600 font-bold">{fecha}</code>, <code class="bg-gray-100 px-1.5 py-0.5 rounded text-indigo-600 font-bold">{forma_pago}</code>, <code class="bg-gray-100 px-1.5 py-0.5 rounded text-indigo-600 font-bold">{empresa}</code>.</p>
             <form action="/guardar_plantilla" method="POST" class="space-y-3">
-                <textarea name="plantilla_mensaje" rows="3" required class="w-full border border-gray-300 rounded p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">{{ plantilla }}</textarea>
+                <textarea name="plantilla_mensaje" rows="3" required class="w-full border border-gray-300 rounded-xl p-3 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">{{ plantilla }}</textarea>
                 <div class="flex justify-between items-center">
-                    <a href="/restablecer_plantilla" class="text-xs text-gray-500 hover:underline">Restablecer plantilla original</a>
-                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded text-sm transition">Guardar Plantilla</button>
+                    <a href="/restablecer_plantilla" class="text-xs text-indigo-600 hover:underline font-medium">Restablecer original</a>
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm">
+                        Guardar Plantilla
+                    </button>
                 </div>
             </form>
         </div>
@@ -174,9 +198,17 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-white border-t border-gray-200 mt-10 py-4 text-center text-xs text-gray-500">
-        CobroBot SaaS &copy; 2026 - Todos los derechos reservados. | <a href="/terminos" class="hover:underline">Términos</a> - <a href="/privacidad" class="hover:underline">Privacidad</a>
+    <footer class="bg-white border-t border-gray-200 py-4 text-center text-xs text-gray-400 font-medium">
+        CobroBot SaaS &copy; 2026 - Todos los derechos reservados.
     </footer>
+
+    <!-- Script para abrir/cerrar el QR -->
+    <script>
+        function toggleModalQR() {
+            const modal = document.getElementById('modalQR');
+            modal.classList.toggle('hidden');
+        }
+    </script>
 
 </body>
 </html>
