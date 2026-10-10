@@ -35,8 +35,8 @@
     <!-- Contenido Principal -->
     <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full space-y-6">
 
-        <!-- Tarjetas de Resumen -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Tarjetas de Resumen y QR -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-white p-5 rounded-lg shadow border border-gray-100 flex items-center justify-between">
                 <div>
                     <p class="text-gray-500 text-sm">Total Cobrado (Pagado)</p>
@@ -50,6 +50,16 @@
                     <h3 class="text-2xl font-bold text-amber-600">S/ {{ "%.2f"|format(total_pendiente) }}</h3>
                 </div>
                 <div class="bg-amber-100 p-3 rounded-full text-amber-600 font-bold">⏳</div>
+            </div>
+            <!-- Tarjeta de Código QR de Yape / Pagos -->
+            <div class="bg-white p-4 rounded-lg shadow border border-gray-100 flex flex-col items-center justify-center text-center">
+                <p class="text-gray-500 text-xs mb-2 font-semibold">Mi Código QR (Yape / Plin)</p>
+                <div class="w-24 h-24 bg-gray-100 border border-gray-200 rounded flex items-center justify-center overflow-hidden mb-1">
+                    <!-- Si tienes una imagen QR guardada en static/qr.png se mostrará aquí -->
+                    <img src="/static/qr.png" alt="QR Yape" onerror="this.style.display='none'; document.getElementById('no-qr').style.display='block';" class="w-full h-full object-contain">
+                    <span id="no-qr" style="display:none;" class="text-[10px] text-gray-400 p-1">Sube qr.png a static/</span>
+                </div>
+                <span class="text-[10px] text-gray-400">(Imagen colocada en la carpeta static)</span>
             </div>
         </div>
 
@@ -75,7 +85,7 @@
                     <input type="text" name="nombre" required class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Teléfono (con código de país o 9 dígitos)</label>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Teléfono (Ej: 987654321)</label>
                     <input type="text" name="telefono" required placeholder="Ej: 987654321" class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
                 <div>
@@ -83,8 +93,8 @@
                     <input type="number" step="0.01" name="monto" required class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Concepto / Forma de Pago</label>
-                    <input type="text" name="forma_pago" required placeholder="Ej: Mensualidad internet" class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Forma de Pago (Ej: Yape, Plin)</label>
+                    <input type="text" name="forma_pago" required placeholder="Ej: Yape" class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Fecha de Cobro</label>
@@ -108,7 +118,7 @@
                             <th class="p-3">Cliente</th>
                             <th class="p-3">Teléfono</th>
                             <th class="p-3">Monto</th>
-                            <th class="p-3">Concepto</th>
+                            <th class="p-3">Método de Pago</th>
                             <th class="p-3">Fecha</th>
                             <th class="p-3">Estado</th>
                             <th class="p-3 text-center">Acciones</th>
@@ -120,7 +130,7 @@
                             <td class="p-3 font-medium text-gray-800">{{ c.nombre }}</td>
                             <td class="p-3 text-gray-600">{{ c.telefono }}</td>
                             <td class="p-3 text-gray-800">S/ {{ "%.2f"|format(c.monto) }}</td>
-                            <td class="p-3 text-gray-600">{{ c.forma_pago }}</td>
+                            <td class="p-3 text-gray-600 font-semibold text-indigo-600">{{ c.forma_pago }}</td>
                             <td class="p-3 text-gray-600">{{ c.fecha_pago }}</td>
                             <td class="p-3">
                                 {% if c.estado == 'Pagado' %}
