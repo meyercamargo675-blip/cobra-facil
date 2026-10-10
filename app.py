@@ -3,7 +3,6 @@ import os
 import logging
 import requests
 import pytz
-import traceback
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import FastAPI, Request, Form, status
@@ -128,6 +127,35 @@ PLANTILLA_AGRADECIMIENTO = (
     "Atentamente {empresa}."
 )
 
+def registrar_bitacora(usuario_id: int, cliente_nombre: str, telefono: str, mensaje: str, estado: str, respuesta: str):
+    conn = get_db()
+    cursor = conn.cursor()
+    fecha_hora = datetime.now(pytz.timezone('America/Lima')).strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        cursor.execute('''
+            INSERT INTO bitacora_whatsapp (usuario_id, nombre_cliente, telefono, mensaje, fecha_hora, estado, respuesta_api)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (usuario_id, cliente_nombre, telefono, mensaje, fecha_hora, estado, respuesta))
+        conn.commit()
+    finally:
+        conn.close()
+
+def enviar_mensaje_whatsapp(telefono: str, mensaje: str, usuario_id: int, cliente_nombre: str):
+    telefono_formateado = formatear_telefono(telefono)
+    payload = {"token": TOKEN, "to": telefono_formateado, "body": mensaje}
+    try:
+        response = requests.post(BASE_URL, data=payload, timeout=10)
+        res_json = response.json()
+        if res_json.get("sent") == "true" or "id" in res_json:
+            registrar_bitacora(usuario_id, cliente_nombre, telefono_formateado, mensaje, "Exitoso", str(res_json))
+            return True, "Enviado con éxito"
+        else:
+            registrar_bitacora(usuario_id, cliente_nombre, telefono_formateado, mensaje, "Fallido", str(res_json))
+            return False, "Error"
+    except Exception as e:
+        registrar_bitacora(usuario_id, cliente_nombre, telefono_formateado, mensaje, "Fallido", str(e))
+        return False, "Excepción"
+
 @app.get("/privacidad", response_class=HTMLResponse)
 async def view_privacidad(request: Request):
     return templates.TemplateResponse(request=request, name="privacidad.html", context={})
@@ -141,10 +169,9 @@ async def view_login(request: Request):
     return templates.TemplateResponse(request=request, name="login.html", context={"error": None})
 
 @app.post("/login", response_class=HTMLResponse)
-async def do_login(request: Request):
-    form = await request.form()
-    usr = str(form.get("usuario") or form.get("username") or "").strip()
-    pwd = str(form.get("password") or form.get("clave") or "").strip()
+async def do_login(request: Request, usuario: Optional[str] = Form(None), username: Optional[str] = Form(None), password: Optional[str] = Form(None), clave: Optional[str] = Form(None)):
+    usr = (usuario or username or "").strip()
+    pwd = (password or clave or "").strip()
 
     if not usr or not pwd:
         return templates.TemplateResponse(request=request, name="login.html", context={"error": "Completa todos los campos."})
@@ -170,40 +197,33 @@ async def view_registro(request: Request):
     return templates.TemplateResponse(request=request, name="registro.html", context={"error": None})
 
 @app.post("/registro", response_class=HTMLResponse)
-async def do_registro(request: Request):
+async def do_registro(request: Request, usuario: Optional[str] = Form(None), username: Optional[str] = Form(None), password: Optional[str] = Form(None), clave: Optional[str] = Form(None), empresa: Optional[str] = Form(None)):
+    usr = (usuario or username or "").strip()
+    pwd = (password or clave or "").strip()
+    emp = (empresa or "").strip()
+
+    if not usr or not pwd or not emp:
+        return templates.TemplateResponse(request=request, name="registro.html", context={"error": "Llena todos los campos."})
+
+    conn = get_db()
+    cursor = conn.cursor()
     try:
-        form = await request.form()
-        # Capturamos cualquier variante posible de los campos del formulario HTML
-        usr = str(form.get("usuario") or form.get("username") or form.get("user") or "").strip()
-        pwd = str(form.get("password") or form.get("clave") or form.get("pass") or "").strip()
-        emp = str(form.get("empresa") or form.get("company") or form.get("nombre_empresa") or "").strip()
+        cursor.execute("INSERT INTO usuarios (usuario, password, empresa) VALUES (?, ?, ?)", (usr, pwd, emp))
+        conn.commit()
+        usuario_id = cursor.lastrowid
 
-        if not usr or not pwd or not emp:
-            return templates.TemplateResponse(request=request, name="registro.html", context={"error": "Llena todos los campos."})
+        vencimiento_inicial = (datetime.now(pytz.timezone('America/Lima')) + timedelta(days=3)).strftime("%Y-%m-%d")
+        cursor.execute("INSERT OR IGNORE INTO configuraciones (usuario_id, plantilla, suscripcion_hasta) VALUES (?, ?, ?)", (usuario_id, PLANTILLA_POR_DEFECTO, vencimiento_inicial))
+        conn.commit()
 
-        conn = get_db()
-        cursor = conn.cursor()
-        try:
-            cursor.execute("INSERT INTO usuarios (usuario, password, empresa) VALUES (?, ?, ?)", (usr, pwd, emp))
-            conn.commit()
-            usuario_id = cursor.lastrowid
-
-            vencimiento_inicial = (datetime.now(pytz.timezone('America/Lima')) + timedelta(days=3)).strftime("%Y-%m-%d")
-            cursor.execute("INSERT OR IGNORE INTO configuraciones (usuario_id, plantilla, suscripcion_hasta) VALUES (?, ?, ?)", (usuario_id, PLANTILLA_POR_DEFECTO, vencimiento_inicial))
-            conn.commit()
-
-            request.session["user_id"] = usuario_id
-            request.session["usuario"] = usr
-            request.session["empresa"] = emp
-            return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
-        except sqlite3.IntegrityError:
-            return templates.TemplateResponse(request=request, name="registro.html", context={"error": "El usuario ya existe. Elige otro nombre."})
-        finally:
-            conn.close()
-    except Exception as e:
-        logger.error(f"ERROR EN REGISTRO: {str(e)}")
-        logger.error(traceback.format_exc())
-        return templates.TemplateResponse(request=request, name="registro.html", context={"error": f"Error interno: {str(e)}"})
+        request.session["user_id"] = usuario_id
+        request.session["usuario"] = usr
+        request.session["empresa"] = emp
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    except sqlite3.IntegrityError:
+        return templates.TemplateResponse(request=request, name="registro.html", context={"error": "El usuario ya existe. Elige otro nombre."})
+    finally:
+        conn.close()
 
 @app.get("/logout")
 async def logout(request: Request):
