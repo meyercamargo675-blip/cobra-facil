@@ -113,9 +113,10 @@ def formatear_telefono(telefono: str) -> str:
     num_limpio = "".join(filter(str.isdigit, str(telefono)))
     if not num_limpio:
         return ""
+    # Si tiene 9 dígitos (ej: 987654321), le agregamos el código de Perú (51) sin el signo +
     if len(num_limpio) == 9:
         num_limpio = f"{DEFAULT_COUNTRY_CODE}{num_limpio}"
-    return f"+{num_limpio}"
+    return num_limpio
 
 PLANTILLA_POR_DEFECTO = (
     "Hola {nombre}, te saludamos de {empresa}. Te recordamos que el día {fecha} "
@@ -144,17 +145,18 @@ def enviar_mensaje_whatsapp(telefono: str, mensaje: str, usuario_id: int, client
     telefono_formateado = formatear_telefono(telefono)
     payload = {"token": TOKEN, "to": telefono_formateado, "body": mensaje}
     try:
-        response = requests.post(BASE_URL, data=payload, timeout=10)
+        response = requests.post(BASE_URL, data=payload, timeout=15)
         res_json = response.json()
-        if res_json.get("sent") == "true" or "id" in res_json:
+        # Verificamos si UltraMsg aceptó el mensaje correctamente
+        if res_json.get("sent") == True or res_json.get("sent") == "true" or "id" in res_json:
             registrar_bitacora(usuario_id, cliente_nombre, telefono_formateado, mensaje, "Exitoso", str(res_json))
             return True, "Enviado con éxito"
         else:
             registrar_bitacora(usuario_id, cliente_nombre, telefono_formateado, mensaje, "Fallido", str(res_json))
-            return False, "Error"
+            return False, "Error en API"
     except Exception as e:
         registrar_bitacora(usuario_id, cliente_nombre, telefono_formateado, mensaje, "Fallido", str(e))
-        return False, "Excepción"
+        return False, str(e)
 
 @app.get("/privacidad", response_class=HTMLResponse)
 async def view_privacidad(request: Request):
@@ -390,7 +392,7 @@ async def marcar_pagado(request: Request, cliente_id: int):
             conn.commit()
             mensaje_gracias = PLANTILLA_AGRADECIMIENTO.format(nombre=cliente["nombre"], monto=f"{cliente['monto']:.2f}", empresa=user["empresa"])
             enviar_mensaje_whatsapp(cliente["telefono"], mensaje_gracias, user["id"], cliente["nombre"])
-            request.session["mensaje_alerta"] = "Pago registrado y mensaje enviado."
+            request.session["mensaje_alerta"] = "Pago registrado y mensaje de agradecimiento enviado."
     finally:
         conn.close()
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
@@ -463,7 +465,7 @@ async def probar_envio_manual(request: Request):
     if not user:
         return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
     ejecutar_notificaciones(forzar_todos_los_pendientes=True)
-    request.session["mensaje_alerta"] = "Prueba ejecutada."
+    request.session["mensaje_alerta"] = "Prueba de envíos manuales ejecutada."
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 def ejecutar_notificaciones(forzar_todos_los_pendientes: bool = False):
@@ -491,7 +493,7 @@ def ejecutar_notificaciones(forzar_todos_los_pendientes: bool = False):
                         cursor.execute("UPDATE clientes SET estado = 'Enviado' WHERE id = ?", (c["id"],))
                         conn.commit()
     except Exception as e:
-        logger.error(f"Error: {e}")
+        logger.error(f"Error en scheduler: {e}")
     finally:
         conn.close()
 
